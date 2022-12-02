@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QApplication
 
 from window import Window
-
+ 
 import sys
 
 

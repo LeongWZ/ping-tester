@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QVBoxLayout, QProgressBar, QLabel, QFrame
 from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt, QThread
+from PySide6.QtCore import Qt
 
 class ExitProgressWindow(QFrame):
     def __init__(self, master):
@@ -8,8 +8,6 @@ class ExitProgressWindow(QFrame):
         self.master = master
 
         self.initUI()
-        
-        self.exitProgressThread = ExitProgressThread(self)
 
     def initUI(self):
         self.setAutoFillBackground(True)
@@ -29,24 +27,3 @@ class ExitProgressWindow(QFrame):
         layout.addWidget(self.label, 1, alignment=Qt.AlignCenter)
 
         self.setLayout(layout)
-
-    
-class ExitProgressThread(QThread):
-    def __init__(self, master):
-        super().__init__()
-        self.master = master
-    
-    def run(self):
-        activeThreadCount = self.master.master.threadpool.activeThreadCount()
-        while activeThreadCount >= 0:
-            killedThreadCount = self.master.progressBar.maximum() - activeThreadCount
-            if killedThreadCount > self.master.progressBar.value():
-                self.master.progressBar.setValue(killedThreadCount)
-            
-            if activeThreadCount == 0:
-                break
-            else:
-                activeThreadCount = self.master.master.threadpool.activeThreadCount()
-        
-        self.msleep(50)
-            

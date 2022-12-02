@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QColor
-from PySide6.QtCore import Slot, QThreadPool, Qt
+from PySide6.QtCore import Slot, QThreadPool, Qt, QThread
 
 from pingThread import PingThread
-from exitProgress import ExitProgressWindow
+from exitProgressWindow import ExitProgressWindow
 
 import os
 import json
@@ -29,6 +29,8 @@ class Window(QWidget):
         self.initUI()
 
         self.show()
+
+        self.exit = False
 
     def initUI(self):
         layout = QGridLayout()
@@ -262,21 +264,49 @@ class Window(QWidget):
     def launchExitProgress(self):
         self.exitProgressWindow.show()
         self.exitProgressWindow.raise_()
-        self.exitProgressWindow.progressBar.setMinimum(0)
-        self.exitProgressWindow.progressBar.setMaximum(self.activePingThreads)
-        self.exitProgressWindow.progressBar.setValue(0)
 
-        self.exitProgressWindow.exitProgressThread.start()
+        if self.activePingThreads == 0:
+            self.exitProgressWindow.progressBar.setMinimum(-1)
+            self.exitProgressWindow.progressBar.setValue(-1)
+        else:
+            self.exitProgressWindow.progressBar.setMinimum(0)
+            self.exitProgressWindow.progressBar.setValue(0)
+
+        self.exitProgressWindow.progressBar.setMaximum(self.activePingThreads)
 
     def closeEvent(self, event):
+        if self.exit:
+            return
+
+        self.exit = True
         self.launchExitProgress()
 
         for pingThread in self.pingThread_list:
             if pingThread.enabled:
                 pingThread.enabled = False
 
-        self.threadpool.waitForDone()
-        self.exitProgressWindow.exitProgressThread.wait()
+        activeThreadCount = self.threadpool.activeThreadCount()
+        while activeThreadCount >= 0:
+            killedThreadCount = self.exitProgressWindow.progressBar.maximum() - activeThreadCount
+            if killedThreadCount > self.exitProgressWindow.progressBar.value():
+                self.exitProgressWindow.progressBar.setValue(killedThreadCount)
+                
+            if activeThreadCount == 0:
+                self.delay()
+                break
+
+            activeThreadCount = self.threadpool.activeThreadCount()
         
+        self.threadpool.waitForDone()
         super().closeEvent(event)
+
+    def delay(self):
+        thread = DelayThread()
+        thread.start()
+        thread.wait()
+
+class DelayThread(QThread):
+    def run(self):
+        self.msleep(50)
+        
         
