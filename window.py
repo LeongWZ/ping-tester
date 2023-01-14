@@ -1,8 +1,9 @@
-from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox
+from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox, QCheckBox
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QColor
 from PySide6.QtCore import Slot, QThreadPool, Qt, QThread
 
-from pingThread import PingThread
+from concurrentPingThread import ConcurrentPingThread
+from intervalPingThread import IntervalPingThread
 from exitProgressWindow import ExitProgressWindow
 
 import os
@@ -47,34 +48,38 @@ class Window(QWidget):
 
         buttonLayout = QGridLayout()
         layout.addLayout(buttonLayout, 0, 1, 1, 1, Qt.AlignLeft)
+        
+        self.simultaneousCheckBox = QCheckBox("Ping simultaneously")
+        self.simultaneousCheckBox.setFont(QFont("Helvetica", 10))
+        buttonLayout.addWidget(self.simultaneousCheckBox, 0, 0)
 
         self.checkAllButton = QPushButton("Check All")
         self.checkAllButton.setFont(QFont("Helvetica", 10))
         self.checkAllButton.clicked.connect(self.checkAll)
-        buttonLayout.addWidget(self.checkAllButton, 0, 0)
+        buttonLayout.addWidget(self.checkAllButton, 1, 0)
 
         self.uncheckAllButton = QPushButton("Uncheck All")
         self.uncheckAllButton.setFont(QFont("Helvetica", 10))
         self.uncheckAllButton.clicked.connect(self.uncheckAll)
-        buttonLayout.addWidget(self.uncheckAllButton, 1, 0)
+        buttonLayout.addWidget(self.uncheckAllButton, 2, 0)
 
         self.startButton = QPushButton("Start")
         self.startButton.setFont(QFont("Helvetica", 10))
         self.startButton.clicked.connect(self.start)
         self.startButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        buttonLayout.addWidget(self.startButton, 0, 1, 0, 1)
+        buttonLayout.addWidget(self.startButton, 1, 1, 2, 1)
 
         self.stopButton = QPushButton("Stop")
         self.stopButton.setFont(QFont("Helvetica", 10))
         self.stopButton.clicked.connect(self.stop)
         self.stopButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        buttonLayout.addWidget(self.stopButton, 0, 2, 0, 1)
+        buttonLayout.addWidget(self.stopButton, 1, 2, 2, 1)
 
         self.resetButton = QPushButton("Reset")
         self.resetButton.setFont(QFont("Helvetica", 10))
         self.resetButton.clicked.connect(self.reset)
         self.resetButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        buttonLayout.addWidget(self.resetButton, 0, 3, 0, 1)
+        buttonLayout.addWidget(self.resetButton, 1, 3, 2, 1)
 
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(["Name", "IP Address", "Status", "Last Time\nResponse", "Current", "Min", "Max", "Avg"])
@@ -142,13 +147,19 @@ class Window(QWidget):
     @Slot()
     def start(self):
         self.startButton.setEnabled(False)
+        self.simultaneousCheckBox.setEnabled(False)
+        if self.simultaneousCheckBox.isChecked():
+            self.simultaneousPing()
+        else:
+            self.intervalPing()
 
+    def simultaneousPing(self):
         for row, server in enumerate(self.server_list):
             if self.model.item(row, 0).checkState() == Qt.CheckState.Checked:
                 self.model.item(row, 0).setCheckable(False)
 
                 ip_address = server[1]
-                t = PingThread(row, ip_address)
+                t = ConcurrentPingThread(row, ip_address)
                 t.signals.started.connect(self.on_start)
                 t.signals.result.connect(self.update_result)
                 t.signals.error.connect(self.on_error)
@@ -161,6 +172,7 @@ class Window(QWidget):
             self.infoMsgBox.setInformativeText("Select an IP address by ticking the checkbox beside its name")
             self.infoMsgBox.exec()
             self.startButton.setEnabled(True)
+            self.simultaneousCheckBox.setEnabled(True)
             return
         
         if len(self.pingThread_list) > self.threadpool.maxThreadCount():
@@ -171,11 +183,36 @@ class Window(QWidget):
                 self.model.item(pingThread.row, 0).setCheckable(True)
             del self.pingThread_list[:]
             self.startButton.setEnabled(True)
+            self.simultaneousCheckBox.setEnabled(True)
             return
 
         for thread in self.pingThread_list:
             self.threadpool.start(thread)
 
+    def intervalPing(self):
+        rowIP_pairs = list()
+        for row, server in enumerate(self.server_list):
+            if self.model.item(row, 0).checkState() == Qt.CheckState.Checked:
+                self.model.item(row, 0).setCheckable(False)
+                ip_address = server[1]
+                rowIP_pairs.append((row, ip_address))
+
+        if len(rowIP_pairs) > 0:
+            t = IntervalPingThread(rowIP_pairs)
+            t.signals.started.connect(self.on_start)
+            t.signals.result.connect(self.update_result)
+            t.signals.error.connect(self.on_error)
+            t.signals.finished.connect(self.on_finished)
+
+            self.pingThread_list.append(t)
+            self.threadpool.start(t)
+        else:
+            self.infoMsgBox.setText(f"No IP address has been selected")
+            self.infoMsgBox.setInformativeText("Select an IP address by ticking the checkbox beside its name")
+            self.infoMsgBox.exec()
+            self.startButton.setEnabled(True)
+            self.simultaneousCheckBox.setEnabled(True)
+            
     @Slot()
     def stop(self):
         if len(self.pingThread_list) == 0:
@@ -187,13 +224,27 @@ class Window(QWidget):
 
     @Slot()
     def reset(self):
-        for pingThread in self.pingThread_list:
-            del pingThread.successQueue[:]
-            pingThread.i = 0
-            pingThread.lastResponseTime = ""
-            pingThread.Min = None
-            pingThread.Max = None
-            pingThread.Avg = 0
+        try:
+            # Reset during interval ping
+            for pingTest in self.pingThread_list[0].pingTests:
+                del pingTest.successQueue[:]
+                pingTest.i = 0
+                pingTest.lastResponseTime = ""
+                pingTest.Min = None
+                pingTest.Max = None
+                pingTest.Avg = 0
+        except IndexError:
+            # Reset when there is no ping
+            pass
+        except AttributeError:
+            # Reset during simultaneous ping
+            for pingThread in self.pingThread_list:
+                del pingThread.successQueue[:]
+                pingThread.i = 0
+                pingThread.lastResponseTime = ""
+                pingThread.Min = None
+                pingThread.Max = None
+                pingThread.Avg = 0
 
         for row in range(self.model.rowCount()):
             if self.model.item(row, 2).text() == "Error, see Current" and self.activePingThreads > 0:
@@ -249,17 +300,26 @@ class Window(QWidget):
     def on_finished(self):
         self.activePingThreads -= 1
         if self.activePingThreads == 0:
-            self.startButton.setEnabled(True)
-
-            for pingThread in self.pingThread_list:
-                self.model.item(pingThread.row, 0).setCheckable(True)
-                if self.model.item(pingThread.row, 2).text() != "Error, see Current":
-                    self.model.item(pingThread.row, 2).setText("")
-                    self.model.item(pingThread.row, 2).setBackground(self.model.item(pingThread.row, 1).background())
-                    self.model.item(pingThread.row, 3).setText("")
-                    self.model.item(pingThread.row, 4).setText("")
+            if self.simultaneousCheckBox.isChecked():    
+                for pingThread in self.pingThread_list:
+                    self.model.item(pingThread.row, 0).setCheckable(True)
+                    if self.model.item(pingThread.row, 2).text() != "Error, see Current":
+                        self.model.item(pingThread.row, 2).setText("")
+                        self.model.item(pingThread.row, 2).setBackground(self.model.item(pingThread.row, 1).background())
+                        self.model.item(pingThread.row, 3).setText("")
+                        self.model.item(pingThread.row, 4).setText("")
+            else:
+                for pingTest in self.pingThread_list[0].pingTests:
+                    self.model.item(pingTest.row, 0).setCheckable(True)
+                    if self.model.item(pingTest.row, 2).text() != "Error, see Current":
+                        self.model.item(pingTest.row, 2).setText("")
+                        self.model.item(pingTest.row, 2).setBackground(self.model.item(pingTest.row, 1).background())
+                        self.model.item(pingTest.row, 3).setText("")
+                        self.model.item(pingTest.row, 4).setText("")
 
             del self.pingThread_list[:]
+            self.startButton.setEnabled(True)
+            self.simultaneousCheckBox.setEnabled(True)
             
     def launchExitProgress(self):
         self.exitProgressWindow.show()
