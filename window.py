@@ -50,28 +50,34 @@ class Window(QWidget):
         layout.addLayout(buttonLayout, 0, 1, 1, 1, Qt.AlignLeft)
         
         self.simultaneousCheckBox = QCheckBox("Ping simultaneously")
+        self.simultaneousCheckBox.setFocusPolicy(Qt.NoFocus)
         buttonLayout.addWidget(self.simultaneousCheckBox, 0, 0)
 
         self.checkAllButton = QPushButton("Check All")
         self.checkAllButton.clicked.connect(self.checkAll)
+        self.checkAllButton.setFocusPolicy(Qt.NoFocus)
         buttonLayout.addWidget(self.checkAllButton, 1, 0)
 
         self.uncheckAllButton = QPushButton("Uncheck All")
         self.uncheckAllButton.clicked.connect(self.uncheckAll)
+        self.uncheckAllButton.setFocusPolicy(Qt.NoFocus)
         buttonLayout.addWidget(self.uncheckAllButton, 2, 0)
 
         self.startButton = QPushButton("Start")
         self.startButton.clicked.connect(self.start)
+        self.startButton.setFocusPolicy(Qt.NoFocus)
         self.startButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.startButton, 1, 1, 2, 1)
 
         self.stopButton = QPushButton("Stop")
         self.stopButton.clicked.connect(self.stop)
+        self.stopButton.setFocusPolicy(Qt.NoFocus)
         self.stopButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.stopButton, 1, 2, 2, 1)
 
         self.resetButton = QPushButton("Reset")
         self.resetButton.clicked.connect(self.reset)
+        self.resetButton.setFocusPolicy(Qt.NoFocus)
         self.resetButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.resetButton, 1, 3, 2, 1)
 
@@ -86,6 +92,8 @@ class Window(QWidget):
         self.tableview = QTableView()
         self.tableview.setModel(self.model)
         self.tableview.setEditTriggers(QTableView.NoEditTriggers)
+        self.tableview.setFocusPolicy(Qt.NoFocus)
+        self.tableview.setSelectionMode(QTableView.NoSelection)
 
         header = self.tableview.horizontalHeader()
         for i in range(5, 8):
