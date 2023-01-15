@@ -23,7 +23,6 @@ class ExitProgressWindow(QFrame):
 
         self.label = QLabel()
         self.label.setText("Exiting...")
-        self.label.setFont(QFont("Helvetica", 10))
         layout.addWidget(self.label, 1, alignment=Qt.AlignCenter)
 
         self.setLayout(layout)

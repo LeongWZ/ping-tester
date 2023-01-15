@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox, QCheckBox
+from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox, QCheckBox, QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QColor
 from PySide6.QtCore import Slot, QThreadPool, Qt, QThread
 
@@ -50,33 +50,27 @@ class Window(QWidget):
         layout.addLayout(buttonLayout, 0, 1, 1, 1, Qt.AlignLeft)
         
         self.simultaneousCheckBox = QCheckBox("Ping simultaneously")
-        self.simultaneousCheckBox.setFont(QFont("Helvetica", 10))
         buttonLayout.addWidget(self.simultaneousCheckBox, 0, 0)
 
         self.checkAllButton = QPushButton("Check All")
-        self.checkAllButton.setFont(QFont("Helvetica", 10))
         self.checkAllButton.clicked.connect(self.checkAll)
         buttonLayout.addWidget(self.checkAllButton, 1, 0)
 
         self.uncheckAllButton = QPushButton("Uncheck All")
-        self.uncheckAllButton.setFont(QFont("Helvetica", 10))
         self.uncheckAllButton.clicked.connect(self.uncheckAll)
         buttonLayout.addWidget(self.uncheckAllButton, 2, 0)
 
         self.startButton = QPushButton("Start")
-        self.startButton.setFont(QFont("Helvetica", 10))
         self.startButton.clicked.connect(self.start)
         self.startButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.startButton, 1, 1, 2, 1)
 
         self.stopButton = QPushButton("Stop")
-        self.stopButton.setFont(QFont("Helvetica", 10))
         self.stopButton.clicked.connect(self.stop)
         self.stopButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.stopButton, 1, 2, 2, 1)
 
         self.resetButton = QPushButton("Reset")
-        self.resetButton.setFont(QFont("Helvetica", 10))
         self.resetButton.clicked.connect(self.reset)
         self.resetButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         buttonLayout.addWidget(self.resetButton, 1, 3, 2, 1)
@@ -350,6 +344,7 @@ class Window(QWidget):
             killedThreadCount = self.exitProgressWindow.progressBar.maximum() - activeThreadCount
             if killedThreadCount > self.exitProgressWindow.progressBar.value():
                 self.exitProgressWindow.progressBar.setValue(killedThreadCount)
+                QApplication.processEvents()
                 
             if activeThreadCount == 0:
                 self.delay()
@@ -367,6 +362,6 @@ class Window(QWidget):
 
 class DelayThread(QThread):
     def run(self):
-        self.msleep(50)
+        self.msleep(300)
         
         
