@@ -8,6 +8,7 @@ import sys
 import traceback
 import re
 import ipaddress
+import time
 
 
 class ConcurrentPingThread(QRunnable):
@@ -93,6 +94,7 @@ class ConcurrentPingThread(QRunnable):
             
             successRate = round(self.successQueue.count(1) / len(self.successQueue) * 100)
             self.signals.result.emit((self.row, successRate, self.lastResponseTime, stats))
+            time.sleep(0.5)
 
         self.signals.finished.emit()
 
@@ -107,7 +109,7 @@ class ConcurrentPingThread(QRunnable):
         return True
 
     def ping(self):
-        pingCount = 2
+        pingCount = 1
         if self.system == "Windows":
             return self.pingOnWindows(pingCount)
 
@@ -129,10 +131,7 @@ class ConcurrentPingThread(QRunnable):
         if "TTL" in stdout:
             return [time] + [int(x.strip("ms")) for x in re.findall("\d+ms", stdout_lines[-1])]
 
-        if "Destination host unreachable" in stdout_lines[1]:
-            return [stdout_lines[1].strip(".")]
-
-        return [stdout_lines[2].strip(".")]
+        return [stdout_lines[1].strip(".")]
 
     def pingOnMac(self, pingCount):
         timeOut = 1000  # in milliseconds
@@ -151,10 +150,6 @@ class ConcurrentPingThread(QRunnable):
 
         if "Destination Host Unreachable" in stdout_lines[1]:
             ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[1])[0]
-            return [f"Reply from {ip}: Destination host unreachable"]
-
-        if "Destination Host Unreachable" in stdout_lines[2]:
-            ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[2])[0]
             return [f"Reply from {ip}: Destination host unreachable"]
 
         if "Request timeout" in stdout_lines[1]:
@@ -177,12 +172,4 @@ class ConcurrentPingThread(QRunnable):
             result[2], result[3] = result[3], result[2]
             return result
 
-        if "Destination Host Unreachable" in stdout_lines[1]:
-            ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[1])[0]
-            return [f"Reply from {ip}: Destination host unreachable"]
-            
-        if "ping statistics" in stdout_lines[1]:
-            return ["Request timed out"]
-
-        return [stdout_lines[1]]
-        
+        return ["Destination host unreachable"]

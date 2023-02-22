@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QVBoxLayout, QProgressBar, QLabel, QFrame
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
 
+
 class ExitProgressWindow(QFrame):
     def __init__(self, master):
         super().__init__()
@@ -26,3 +27,4 @@ class ExitProgressWindow(QFrame):
         layout.addWidget(self.label, 1, alignment=Qt.AlignCenter)
 
         self.setLayout(layout)
+        

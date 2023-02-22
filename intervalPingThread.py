@@ -9,6 +9,7 @@ import traceback
 import re
 import ipaddress
 
+
 class IntervalPingThread(QRunnable):
     def __init__(self, rowIP_pairs):
         super().__init__()
@@ -124,7 +125,7 @@ class IntervalPingTest(QObject):
         return True
 
     def ping(self):
-        pingCount = 2
+        pingCount = 1
         if self.parent.system == "Windows":
             return self.pingOnWindows(pingCount)
 
@@ -146,10 +147,7 @@ class IntervalPingTest(QObject):
         if "TTL" in stdout:
             return [time] + [int(x.strip("ms")) for x in re.findall("\d+ms", stdout_lines[-1])]
 
-        if "Destination host unreachable" in stdout_lines[1]:
-            return [stdout_lines[1].strip(".")]
-
-        return [stdout_lines[2].strip(".")]
+        return [stdout_lines[1].strip(".")]
 
     def pingOnMac(self, pingCount):
         timeOut = 1000  # in milliseconds
@@ -170,10 +168,6 @@ class IntervalPingTest(QObject):
             ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[1])[0]
             return [f"Reply from {ip}: Destination host unreachable"]
 
-        if "Destination Host Unreachable" in stdout_lines[2]:
-            ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[2])[0]
-            return [f"Reply from {ip}: Destination host unreachable"]
-
         if "Request timeout" in stdout_lines[1]:
             return ["Request timed out"]
 
@@ -188,20 +182,10 @@ class IntervalPingTest(QObject):
         stdout = ping_response.stdout.decode("utf-8")
 
         stdout_lines = [line.strip() for line in stdout.split('\n') if line.strip() != '']
-
+        
         if "ttl" in stdout:
             result = [time] + [round(float(x.strip("/"))) for x in re.findall("\d+.\d+/", stdout_lines[-1])]
             result[2], result[3] = result[3], result[2]
             return result
-
-        if "Destination Host Unreachable" in stdout_lines[1]:
-            ip = re.findall("\d+.\d+.\d+.\d+", stdout_lines[1])[0]
-            return [f"Reply from {ip}: Destination host unreachable"]
-            
-        if "ping statistics" in stdout_lines[1]:
-            return ["Request timed out"]
-
-        return [stdout_lines[1]]
-
-
-    
+        
+        return ["Destination host unreachable"]

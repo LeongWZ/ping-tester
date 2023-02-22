@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTableView, QPushButton, QGridLayout, QWidget, QHeaderView, QSizePolicy, QMessageBox, QCheckBox, QApplication
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QFont, QColor
-from PySide6.QtCore import Slot, QThreadPool, Qt, QThread
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
+from PySide6.QtCore import Slot, QThreadPool, Qt
 
 from concurrentPingThread import ConcurrentPingThread
 from intervalPingThread import IntervalPingThread
@@ -8,6 +8,7 @@ from exitProgressWindow import ExitProgressWindow
 
 import os
 import json
+import time
 
 
 class Window(QWidget):
@@ -301,27 +302,27 @@ class Window(QWidget):
     @Slot()
     def on_finished(self):
         self.activePingThreads -= 1
-        if self.activePingThreads == 0:
-            if self.simultaneousCheckBox.isChecked():    
-                for pingThread in self.pingThread_list:
-                    self.model.item(pingThread.row, 0).setCheckable(True)
-                    if self.model.item(pingThread.row, 2).text() != "Error, see Current":
-                        self.model.item(pingThread.row, 2).setText("")
-                        self.model.item(pingThread.row, 2).setBackground(self.model.item(pingThread.row, 1).background())
-                        self.model.item(pingThread.row, 3).setText("")
-                        self.model.item(pingThread.row, 4).setText("")
-            else:
-                for pingTest in self.pingThread_list[0].pingTests:
-                    self.model.item(pingTest.row, 0).setCheckable(True)
-                    if self.model.item(pingTest.row, 2).text() != "Error, see Current":
-                        self.model.item(pingTest.row, 2).setText("")
-                        self.model.item(pingTest.row, 2).setBackground(self.model.item(pingTest.row, 1).background())
-                        self.model.item(pingTest.row, 3).setText("")
-                        self.model.item(pingTest.row, 4).setText("")
+        if self.activePingThreads > 0:
+            return
+        
+        if self.simultaneousCheckBox.isChecked():    
+            for pingThread in self.pingThread_list:
+                self.model.item(pingThread.row, 0).setCheckable(True)
+                if self.model.item(pingThread.row, 2).text() != "Error, see Current":
+                    self.model.item(pingThread.row, 2).setText("")
+                    self.model.item(pingThread.row, 2).setBackground(self.model.item(pingThread.row, 1).background())
+                    self.model.item(pingThread.row, 4).setText("")
+        else:
+            for pingTest in self.pingThread_list[0].pingTests:
+                self.model.item(pingTest.row, 0).setCheckable(True)
+                if self.model.item(pingTest.row, 2).text() != "Error, see Current":
+                    self.model.item(pingTest.row, 2).setText("")
+                    self.model.item(pingTest.row, 2).setBackground(self.model.item(pingTest.row, 1).background())
+                    self.model.item(pingTest.row, 4).setText("")
 
-            del self.pingThread_list[:]
-            self.startButton.setEnabled(True)
-            self.simultaneousCheckBox.setEnabled(True)
+        del self.pingThread_list[:]
+        self.startButton.setEnabled(True)
+        self.simultaneousCheckBox.setEnabled(True)
             
     def launchExitProgress(self):
         self.exitProgressWindow.show()
@@ -355,21 +356,10 @@ class Window(QWidget):
                 QApplication.processEvents()
                 
             if activeThreadCount == 0:
-                self.delay()
+                time.sleep(0.3)
                 break
 
             activeThreadCount = self.threadpool.activeThreadCount()
         
-        self.threadpool.waitForDone()
+        self.threadpool.waitForDone(1000)
         super().closeEvent(event)
-
-    def delay(self):
-        thread = DelayThread()
-        thread.start()
-        thread.wait()
-
-class DelayThread(QThread):
-    def run(self):
-        self.msleep(300)
-        
-        
