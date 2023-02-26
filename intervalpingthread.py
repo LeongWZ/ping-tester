@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, QRunnable, QDateTime
 
-from pingThreadSignals import PingThreadSignals
+from pingthreadsignals import PingThreadSignals
 
 import platform
 import subprocess
