@@ -1,6 +1,6 @@
 # Ping Tester
 A desktop GUI app which pings multiple IP addresses simultaneously. Developed using PySide6.
 
-![Screenshot_1](https://user-images.githubusercontent.com/106868833/205206558-b4da0ec1-aea8-4947-8d50-1fd72e651eae.png)
+![Example 1](https://user-images.githubusercontent.com/106868833/225628034-f905c108-403f-449c-8468-0cfbbdd9975f.png)
 
-![Screenshot_2](https://user-images.githubusercontent.com/106868833/205206592-b54b183b-a494-411a-b6b7-e2cc6c23c571.png)
+![Example 2](https://user-images.githubusercontent.com/106868833/225628102-9a6f9fec-0936-4941-aacd-46f30e1c7991.png)
