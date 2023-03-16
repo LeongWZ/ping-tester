@@ -151,7 +151,8 @@ class IntervalPingTest(QObject):
 
     def pingOnMac(self, pingCount):
         timeOut = 1000  # in milliseconds
-
+        if pingCount < 2:
+            pingCount = 2
         cmd = 'ping -c %d -W %d %s' % (pingCount, timeOut, self.ip_address)
         ping_response = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True)
         time = QDateTime.currentDateTime().toString("dd/MM/yyyy  hh:mm:ss")
